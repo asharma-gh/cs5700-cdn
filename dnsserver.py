@@ -1,5 +1,6 @@
 import socketserver as SocketServer
 import socket
+from collections import namedtuple
 import threading
 '''
 Represents a basic DNS Server, with dynamic IP redirection
@@ -13,8 +14,30 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
         handler for incoming packets for this server,
         assumes that we will receive DNS messages
     '''
+
+    DNS_PKT_SIZE = 512
+    DNS_HD_FMT = ">HHHHHH"
+    DNS_HD_UNPK = namedtuple("DNSHD", 'message_id, flags, question_count, answer_count, auth_count, addition_count, rest')
+
     def handle(self):
+        #request is the socket
+        packet = self.request.recv(DNS_PKT_SIZE)
+        content = __unpack_dns_pkt(pkt)
+
         return "fiz"
+
+    #stuff
+    def __unpack_dns_pkt(self, pkt):
+        pass
+
+    def __handle_dns_question(self, pkt):
+        pass
+
+    def __handle_dns_answer(self, pkt):
+        pass
+
+    def __pack_dns_response(self, content):
+        pass
 
 class ThreadedDNSServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     '''
@@ -43,9 +66,5 @@ class DNSServerFront(object):
         self.server.shutdown()
         self.server.server_close()
 
-
-'''
-    From: https://docs.python.org/2/library/socketserver.html
-'''
 if __name__ == "__main__":
     foo = DNSServerFront("localhost", 0)

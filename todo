@@ -1,0 +1,13 @@
+-- scripts to deploy code on EC2 instances
+
+- DNS Server
+- will require interpreting DNS packets
+- will require some sort of server, probably a UDPServer from SocketServer module
+    - need to think of strategy to find the optimal httpserver for a given request, load balancing stuff?
+    - also would subsequently want to cache httpserver -> ip range mappings to reduce latency with lookups, with a TTL
+
+- http server
+    - by far the fastest way to persist cached data is using a mmap'd ds, but plaintext w/ csv is much faster to write
+    -
+
+- EC2 stuff

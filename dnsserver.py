@@ -23,23 +23,29 @@ class ThreadedDNSServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     '''
     pass
 
+class DNSServerFront(object):
+    '''
+        Represents the front-end interface for the DNS Server
+    '''
+    # server object
+    server = 0
+
+    def __init__(self,host, port):
+        self.server = ThreadedDNSServer((host, port), ThreadedDNSRequestHandler)
+        # Start a thread with the server -- that thread will then start one
+        # more thread for each request
+        server_thread = threading.Thread(target=self.server.serve_forever)
+        # Exit the server thread when the main thread terminates
+        server_thread.daemon = True
+        server_thread.start()
+        print("Server loop running in thread:", server_thread.name)
+
+        self.server.shutdown()
+        self.server.server_close()
+
+
 '''
     From: https://docs.python.org/2/library/socketserver.html
 '''
 if __name__ == "__main__":
-    # Port 0 means to select an arbitrary unused port
-    HOST, PORT = "localhost", 0
-
-    server = ThreadedDNSServer((HOST, PORT), ThreadedDNSRequestHandler)
-    ip, port = server.server_address
-
-    # Start a thread with the server -- that thread will then start one
-    # more thread for each request
-    server_thread = threading.Thread(target=server.serve_forever)
-    # Exit the server thread when the main thread terminates
-    server_thread.daemon = True
-    server_thread.start()
-    print("Server loop running in thread:", server_thread.name)
-
-    server.shutdown()
-    server.server_close()
+    foo = DNSServerFront("localhost", 0)

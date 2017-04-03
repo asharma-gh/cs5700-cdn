@@ -1,8 +1,6 @@
 #!/bin/bash
 
-#scp
-
-while getopts ":u:i:" opt; do
+while getopts "u:i:" opt; do
   case $opt in
     u)
       USER=$OPTARG
@@ -13,8 +11,13 @@ while getopts ":u:i:" opt; do
   esac
 done
 
-echo $USER
-echo $KEY
+#echo $USER
+#echo $KEY
+scp -i $KEY dnsserver Makefile $USER@cs5700cdnproject.ccs.neu.edu:~
+ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu 'make dns'
 
-scp -i $KEY httpserver dnsserver Makefile $USER@ec2-52-90-80-45.compute-1.amazonaws.com:~
-ssh $USER@ec2-52-90-80-45.compute-1.amazonaws.com 'make'
+while read line
+do
+    scp -i $KEY httpserver Makefile $USER@$line:~
+    ssh -n -i $KEY $USER@$line 'make http'
+done < serverlist.txt

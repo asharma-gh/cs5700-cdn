@@ -16,4 +16,5 @@ done
 echo $USER
 echo $KEY
 
-for
+scp -i $KEY httpserver dnsserver Makefile $USER@ec2-52-90-80-45.compute-1.amazonaws.com:~
+ssh $USER@ec2-52-90-80-45.compute-1.amazonaws.com 'make'

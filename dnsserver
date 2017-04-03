@@ -17,8 +17,9 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
     '''
 
     DNS_PKT_SIZE = 512
-    DNS_HD_FMT = ">HHHHHH"
-    DNS_HD_UNPK = namedtuple("DNSHD", 'message_id, flags, question_count, answer_count, auth_count, addition_count, rest')
+    DNS_FMT = "!HBBHHHH"
+
+    DNS_UNPK = namedtuple('DNS', 'pkt_id qr opcode aa tc rd ra rcode qdcount ancount nscount arcount')
 
     def handle(self):
         #request is the socket
@@ -29,7 +30,16 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
 
     #stuff
     def __unpack_dns_pkt(self, pkt):
-        pass
+        tmp = struct.unpack(DNS_FMT, pkt)
+        qr = ((tmp[1] >> 7) & 1)
+        opcode = ((tmp[1] >> 3) & 0x7)
+        aa = ((tmp[1] >> 2) & 1)
+        tc = ((tmp[1] >> 1) & 1)
+        rd = (tmp[1] & 1)
+        ra = ((tmp[2] >> 7) & 1)
+        rcode = (tmp[2] & 0x7)
+
+        return DNS_UNPK(pkt_id=tmp[0], qr=qr, opcode=opcode, aa=aa, tc=tc, rd=rd, ra=ra, rcode=rcode, qdcount=tmp[3], ancount=tmp[4], nscount=tmp[5], arcount=tmp[6])
 
     def __handle_dns_question(self, pkt):
         pass
@@ -39,6 +49,10 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
 
     def __pack_dns_response(self, content):
         pass
+    def __pack_dns(pkt_id, qr, opcode, aa, tc, rd, ra, rcode, qdcount, ancount, nscount, arcount):
+        flags1 = (qr << 7) | (opcode << 3) | (aa << 2) | (tc << 1) | rd
+        flags2 = (ra << 7) | rcode
+        return struct.pack(DNS_FMT, pkt_id, flags1, flags2, qdcount, ancount, nscount, arcount)
 
 class ThreadedDNSServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     '''

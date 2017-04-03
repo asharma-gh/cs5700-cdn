@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#scp
+
+while getopts ":u:i:" opt; do
+  case $opt in
+    u)
+      USER=$OPTARG
+      ;;
+    i)
+      KEY=$OPTARG
+      ;;
+  esac
+done
+
+echo $USER
+echo $KEY
+
+for

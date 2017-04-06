@@ -7,8 +7,10 @@ while getopts "p:o:n:u:i:" opt; do
       ;;
     o)
       ORIGIN=$OPTARG
+      ;;
     n)
       NAME=$OPTARG
+      ;;
     u)
       USER=$OPTARG
       ;;

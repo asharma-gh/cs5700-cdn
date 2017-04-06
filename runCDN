@@ -1,0 +1,31 @@
+#!/bin/bash
+
+while getopts "p:o:n:u:i:" opt; do
+  case $opt in
+    p)
+      PORT=$OPTARG
+      ;;
+    o)
+      ORIGIN=$OPTARG
+      ;;
+    n)
+      NAME=$OPTARG
+      ;;
+    u)
+      USER=$OPTARG
+      ;;
+    i)
+      KEY=$OPTARG
+      ;;
+  esac
+done
+
+#echo $USER
+#echo $KEY
+ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu "./dnsserver -p $PORT -n $NAME"
+
+while read line
+do
+    
+    ssh -n -i $KEY $USER@$line "./httpserver -p $PORT -o $ORIGIN"
+done < serverlist.txt

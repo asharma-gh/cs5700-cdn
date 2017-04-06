@@ -1,92 +1,37 @@
-import http.server
-import socketserver as SocketServer
-import threading
-import email.utils
-import html
-import http.client
-import io
-import mimetypes
-import os
-import posixpath
-import select
-import shutil
-import socket # For gethostbyaddr()
+#!/bin/env python3
+
+import getopt
 import socketserver
+import mmap
 import sys
-import time
-import urllib.parse
-import copy
-import argparse
+import os
+import threading
 
-from http import HTTPStatus
+optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
+for opt in optlist:
+    if opt[0] == '-p':
+        port = int(opt[1])
+    elif opt[0] == '-o':
+        origin = opt[1]
 
-Handler = http.server.SimpleHTTPRequestHandler
+cache = {}
+for root, _, files in os.walk('www'):
+    for f in files:
+        opened = open(os.path.join(root, f), "r+b")
+        #print(root[4:], f)
+        cache["/" + root[4:] + "/" + f] = mmap.mmap(opened.fileno(), 0)
 
-class HTTPRequest(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        """Serve a GET request."""
-        f = self.send_head()
-        if f:
-            try:
-                self.copyfile(f, self.wfile)
-            finally:
-                f.close()
+class HTTPRequest(socketserver.BaseRequestHandler):
+    def handle(self):
+        self.data = self.request.recv(1024).strip()
+        command, path, version = self.data.split('\r\n'.encode())[0].split()
+        if command == "GET".encode():
+            global cache
+            ok = cache[path.decode()].read()
+            self.request.sendall(ok)
+            cache[path.decode()].seek(0)
 
-    def translate_path(self, path):
-        if (path == "/kek"):
-            return "../../../Downloads/6a7.png"
-        else:
-            return http.server.SimpleHTTPRequestHandler.translate_path(self, path)
-
-
-    def send_head(self):
-        """Common code for GET and HEAD commands.
-        This sends the response code and MIME headers.
-        Return value is either a file object (which has to be copied
-        to the outputfile by the caller unless the command was HEAD,
-        and must be closed by the caller under all circumstances), or
-        None, in which case the caller has nothing further to do.
-        """
-        path = self.translate_path(self.path)
-        f = None
-        if os.path.isdir(path):
-            parts = urllib.parse.urlsplit(self.path)
-            if not parts.path.endswith('/'):
-                # redirect browser - doing basically what apache does
-                self.send_response(HTTPStatus.MOVED_PERMANENTLY)
-                new_parts = (parts[0], parts[1], parts[2] + '/',
-                             parts[3], parts[4])
-                new_url = urllib.parse.urlunsplit(new_parts)
-                self.send_header("Location", new_url)
-                self.end_headers()
-                return None
-            for index in "index.html", "index.htm":
-                index = os.path.join(path, index)
-                if os.path.exists(index):
-                    path = index
-                    break
-            else:
-                return self.list_directory(path)
-        ctype = self.guess_type(path)
-        try:
-            print(path)
-            f = open(path, 'rb')
-        except OSError:
-            self.send_error(HTTPStatus.NOT_FOUND, "File not found")
-            return None
-        try:
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", ctype)
-            fs = os.fstat(f.fileno())
-            self.send_header("Content-Length", str(fs[6]))
-            self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
-            self.end_headers()
-            return f
-        except:
-            f.close()
-            raise
-
-class ThreadedHTTPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class ThreadedHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 class HTTPServerFront(object):
@@ -106,4 +51,4 @@ class HTTPServerFront(object):
         self.server.server_close()
 
 if __name__ == "__main__":
-    baz = HTTPServerFront("localhost", 8008)
+    baz = HTTPServerFront("", port)

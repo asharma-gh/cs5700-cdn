@@ -19,7 +19,7 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
     DNS_PKT_SIZE = 512
     DNS_FMT = "!HBBHHHH"
 
-    DNS_UNPK = namedtuple('DNS', 'pkt_id qr opcode aa tc rd ra rcode qdcount ancount nscount arcount')
+    DNS_UNPK = namedtuple('DNS', 'pkt_id qr opcode aa tc rd ra rcode qdcount ancount nscount arcount data')
 
     def handle(self):
         #request is the socket
@@ -38,8 +38,9 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
         rd = (tmp[1] & 1)
         ra = ((tmp[2] >> 7) & 1)
         rcode = (tmp[2] & 0x7)
-
-        return DNS_UNPK(pkt_id=tmp[0], qr=qr, opcode=opcode, aa=aa, tc=tc, rd=rd, ra=ra, rcode=rcode, qdcount=tmp[3], ancount=tmp[4], nscount=tmp[5], arcount=tmp[6])
+        data = pkt[calcsize(self.DNS_FMT):]
+        print(data)
+        return DNS_UNPK(pkt_id=tmp[0], qr=qr, opcode=opcode, aa=aa, tc=tc, rd=rd, ra=ra, rcode=rcode, qdcount=tmp[3], ancount=tmp[4], nscount=tmp[5], arcount=tmp[6], data)
 
     def __handle_dns_question(self, pkt):
         pass

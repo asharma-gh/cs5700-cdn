@@ -1,0 +1,22 @@
+#!/bin/bash
+
+while getopts "u:i:" opt; do
+  case $opt in
+    u)
+      USER=$OPTARG
+      ;;
+    i)
+      KEY=$OPTARG
+      ;;
+  esac
+done
+
+#echo $USER
+#echo $KEY
+ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu './dnsserver -p 41234 -n cs5700cdn.example.com'
+
+while read line
+do
+    
+    ssh -n -i $KEY $USER@$line './httpserver -p 41234 -o idontknow.com'
+done < serverlist.txt

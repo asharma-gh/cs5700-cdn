@@ -40,7 +40,7 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
         rcode = (tmp[2] & 0x7)
         data = pkt[calcsize(self.DNS_FMT):]
         print(data)
-        return DNS_UNPK(pkt_id=tmp[0], qr=qr, opcode=opcode, aa=aa, tc=tc, rd=rd, ra=ra, rcode=rcode, qdcount=tmp[3], ancount=tmp[4], nscount=tmp[5], arcount=tmp[6], data)
+        return DNS_UNPK(pkt_id=tmp[0], qr=qr, opcode=opcode, aa=aa, tc=tc, rd=rd, ra=ra, rcode=rcode, qdcount=tmp[3], ancount=tmp[4], nscount=tmp[5], arcount=tmp[6], data=data)
 
     def __handle_dns_question(self, pkt):
         pass

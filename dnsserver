@@ -21,6 +21,8 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
 
     DNS_UNPK = namedtuple('DNS', 'pkt_id qr opcode aa tc rd ra rcode qdcount ancount nscount arcount data')
 
+    SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
+
     def handle(self):
         #request is the socket
         packet = self.request.recv(DNS_PKT_SIZE)
@@ -53,7 +55,7 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
     def __pack_dns(pkt_id, qr, opcode, aa, tc, rd, ra, rcode, qdcount, ancount, nscount, arcount):
         flags1 = (qr << 7) | (opcode << 3) | (aa << 2) | (tc << 1) | rd
         flags2 = (ra << 7) | rcode
-        return struct.pack(DNS_FMT, pkt_id, flags1, flags2, qdcount, ancount, nscount, arcount)
+        return struct.pack(DNS_FMT, pkt_id, flags1, flags2, qdcount, ancount, nscount, arcount) + SERVER.encode()
 
 class ThreadedDNSServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     '''

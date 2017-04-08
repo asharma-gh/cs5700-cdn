@@ -1,0 +1,30 @@
+Project5CDN
+
+High Level Approach
+
+In this assignment, we started by first defining our two servers for dns and http.
+We then further iterated on the features for these two servers. This involved developing
+scripts to deploy and test these servers. In the future we intend to further develop performance enhancing functionality
+for these two servers, including active measurements on the dns server in order to select the best performing replica server.
+
+Performance Enhancing Techniques so far:
+
+Right now we implemented caching on the http server. 
+
+Challenges faced:
+
+Currently the largest challenge we are facing involves verifying that our servers are correct. Testing in a networked
+setting is a challenge in itself due to the large variety of situations that can occur that we are trying to take into
+account in our design. For example, we want to make sure that our http and dns server function properly in the face of 
+a crash, and can recover properly.
+
+Description of Work:
+
+Arvin:
+- runCDN script
+- DNS server and functionality
+- README
+
+Chris:
+- deployCDN script
+- http server and functionality

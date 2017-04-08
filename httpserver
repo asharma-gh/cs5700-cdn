@@ -53,6 +53,7 @@ class HTTPRequest(socketserver.BaseRequestHandler):
                     buf = self.s.recv(4096)
                 self.request.sendall(b"".join(data))
 
+#TODO change to forking?
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 

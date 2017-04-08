@@ -3,6 +3,8 @@ import socketserver as SocketServer
 import socket
 from collections import namedtuple
 import threading
+import sys
+import getopt
 '''
 Represents a basic DNS Server, with dynamic IP redirection
 for load-balancing and performance
@@ -89,4 +91,11 @@ class DNSServerFront(object):
         self.server.server_close()
 
 if __name__ == "__main__":
-    foo = DNSServerFront("localhost", 0)
+
+    optlist, _ = getopt.getopt(sys.argv[1:], 'p:n:')
+    for opt in optlist:
+        if opt[0] == '-p':
+            port = int(opt[1])
+        elif opt[0] == '-n':
+            name = opt[1]
+    foo = DNSServerFront("localhost", port)

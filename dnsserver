@@ -27,8 +27,8 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
         #request is the socket
         packet = self.request.recv(DNS_PKT_SIZE)
         content = __unpack_dns_pkt(pkt)
+        self.request.sendall(__pack_dns_response(content))
 
-        return "fiz"
 
     #stuff
     def __unpack_dns_pkt(self, pkt):
@@ -47,15 +47,17 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
     def __handle_dns_question(self, pkt):
         pass
 
-    def __handle_dns_answer(self, pkt):
-        pass
+    def __handle_dns_response(self, content):
+        return __pack_dns(content.pk_id, content.qr, content.opcode, content.aa,
+                content.tc, content.rd, content.ra, content.rcode, content.qdcode,
+                content.ancount, content.nscount, content.arcount)
 
     def __pack_dns_response(self, content):
         pass
     def __pack_dns(pkt_id, qr, opcode, aa, tc, rd, ra, rcode, qdcount, ancount, nscount, arcount):
         flags1 = (qr << 7) | (opcode << 3) | (aa << 2) | (tc << 1) | rd
         flags2 = (ra << 7) | rcode
-        return struct.pack(DNS_FMT, pkt_id, flags1, flags2, qdcount, ancount, nscount, arcount) + SERVER.encode()
+        return struct.pack(DNS_FMT, pkt_id, flags1, flags2, qdcount, ancount, nscount, arcount) + struct.pack("!s", SERVER.encode())
 
 class ThreadedDNSServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     '''

@@ -53,14 +53,13 @@ class HTTPRequest(socketserver.BaseRequestHandler):
                     buf = self.s.recv(4096)
                 self.request.sendall(b"".join(data))
 
-#TODO change to forking?
-class ThreadedHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+class ForkHTTPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
     pass
 
 class HTTPServerFront(object):
     server = 0
     def __init__(self, host, port):
-        self.server = ThreadedHTTPServer((host, port), HTTPRequest)
+        self.server = ForkHTTPServer((host, port), HTTPRequest)
 
         server_thread = threading.Thread(target=self.server.serve_forever)
         server_thread.daemon = True

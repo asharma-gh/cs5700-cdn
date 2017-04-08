@@ -26,6 +26,7 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
     SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
 
     def handle(self):
+        print("got stuff")
         #request is the socket
         packet = self.request.recv(DNS_PKT_SIZE)
         content = __unpack_dns_pkt(pkt)
@@ -98,4 +99,6 @@ if __name__ == "__main__":
             port = int(opt[1])
         elif opt[0] == '-n':
             name = opt[1]
+    print("PORT:")
+    print(port)
     foo = DNSServerFront("localhost", port)

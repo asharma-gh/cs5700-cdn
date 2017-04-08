@@ -1,105 +1,70 @@
-#!/usr/bin/env python3
-import http.server
-import socketserver as SocketServer
-import threading
-import email.utils
-import html
-import http.client
-import io
-import mimetypes
-import os
-import posixpath
-import select
-import shutil
-import socket # For gethostbyaddr()
+#!/bin/env python3
+
+import getopt
 import socketserver
+import socket
+import mmap
 import sys
-import time
-import urllib.parse
-import copy
-import argparse
+import os
+import threading
+import hashlib
+import glob
 
-from http import HTTPStatus
+optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
+for opt in optlist:
+    if opt[0] == '-p':
+        port = int(opt[1])
+    elif opt[0] == '-o':
+        origin = opt[1]
 
-Handler = http.server.SimpleHTTPRequestHandler
+cache = {}
 
-class HTTPRequest(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        """Serve a GET request."""
-        f = self.send_head()
-        if f:
-            try:
-                self.copyfile(f, self.wfile)
-            finally:
-                f.close()
+files = glob.glob("www/*")
+for f in files:
+    opened = open(f, "r+b")
+    #TODO change from mmap?
+    cache[f[4:]] = mmap.mmap(opened.fileno(), 0)
 
-    def translate_path(self, path):
-        if (path == "/kek"):
-            return "../../../Downloads/6a7.png"
-        else:
-            return http.server.SimpleHTTPRequestHandler.translate_path(self, path)
+class HTTPRequest(socketserver.BaseRequestHandler):
+    def __init__(self, request, client_address, server):
+        self.s = socket.socket()
+        super().__init__(request, client_address, server)
 
-
-    def send_head(self):
-        """Common code for GET and HEAD commands.
-        This sends the response code and MIME headers.
-        Return value is either a file object (which has to be copied
-        to the outputfile by the caller unless the command was HEAD,
-        and must be closed by the caller under all circumstances), or
-        None, in which case the caller has nothing further to do.
-        """
-        path = self.translate_path(self.path)
-        f = None
-        if os.path.isdir(path):
-            parts = urllib.parse.urlsplit(self.path)
-            if not parts.path.endswith('/'):
-                # redirect browser - doing basically what apache does
-                self.send_response(HTTPStatus.MOVED_PERMANENTLY)
-                new_parts = (parts[0], parts[1], parts[2] + '/',
-                             parts[3], parts[4])
-                new_url = urllib.parse.urlunsplit(new_parts)
-                self.send_header("Location", new_url)
-                self.end_headers()
-                return None
-            for index in "index.html", "index.htm":
-                index = os.path.join(path, index)
-                if os.path.exists(index):
-                    path = index
-                    break
+    def handle(self):
+        self.data = self.request.recv(1024).strip()
+        command, path, version = self.data.split('\r\n'.encode())[0].split()
+        if command == "GET".encode():
+            global cache
+            hashpath = hashlib.sha256(path).hexdigest()
+            if hashpath in cache:
+                response = cache[hashpath]
+                self.request.sendall(response.read())
+                response.seek(0)
             else:
-                return self.list_directory(path)
-        ctype = self.guess_type(path)
-        try:
-            print(path)
-            f = open(path, 'rb')
-        except OSError:
-            self.send_error(HTTPStatus.NOT_FOUND, "File not found")
-            return None
-        try:
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", ctype)
-            fs = os.fstat(f.fileno())
-            self.send_header("Content-Length", str(fs[6]))
-            self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
-            self.end_headers()
-            return f
-        except:
-            f.close()
-            raise
+                global origin
+                self.s.connect((origin, 8080))
+                self.s.send(b"GET " + path + b" HTTP/1.1\r\nHost: " + \
+                        origin.encode() + b":8080\r\n\r\n")
+                data = []
+                #TODO fix?
+                buf = self.s.recv(4096)
+                while buf:
+                    data.append(buf)
+                    buf = self.s.recv(4096)
+                self.request.sendall(b"".join(data))
 
-class ThreadedHTTPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class ForkHTTPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
     pass
 
 class HTTPServerFront(object):
     server = 0
     def __init__(self, host, port):
-        self.server = ThreadedHTTPServer((host, port), HTTPRequest)
+        self.server = ForkHTTPServer((host, port), HTTPRequest)
 
         server_thread = threading.Thread(target=self.server.serve_forever)
-        # Exit the server thread when the main thread terminates
         server_thread.daemon = True
         server_thread.start()
-        print("Server loop running in thread:", server_thread.name)
+        print("Server started")
 
         self.server.serve_forever()
 
@@ -107,4 +72,4 @@ class HTTPServerFront(object):
         self.server.server_close()
 
 if __name__ == "__main__":
-    baz = HTTPServerFront("localhost", 8008)
+    baz = HTTPServerFront("", port)

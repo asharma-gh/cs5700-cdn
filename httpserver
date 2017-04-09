@@ -9,6 +9,7 @@ import os
 import threading
 import hashlib
 import glob
+import re
 
 optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
 for opt in optlist:
@@ -25,9 +26,12 @@ for f in files:
     #TODO change from mmap?
     cache[f[4:]] = mmap.mmap(opened.fileno(), 0)
 
+s = socket.socket()
+s.connect((origin, 8080))
+regex = re.compile('Content-Length: (\d+)')
+
 class HTTPRequest(socketserver.BaseRequestHandler):
     def __init__(self, request, client_address, server):
-        self.s = socket.socket()
         super().__init__(request, client_address, server)
 
     def handle(self):
@@ -42,16 +46,44 @@ class HTTPRequest(socketserver.BaseRequestHandler):
                 response.seek(0)
             else:
                 global origin
-                self.s.connect((origin, 8080))
-                self.s.send(b"GET " + path + b" HTTP/1.1\r\nHost: " + \
+                global s
+                global re
+                s.send(b"GET " + path + b" HTTP/1.1\r\nHost: " + \
                         origin.encode() + b":8080\r\n\r\n")
                 data = []
                 #TODO fix?
-                buf = self.s.recv(4096)
-                while buf:
-                    data.append(buf)
-                    buf = self.s.recv(4096)
-                self.request.sendall(b"".join(data))
+                buf = s.recv(4096)
+                length = -1
+                header = "".encode()
+                while "\r\n\r\n".encode() not in buf:
+                    header += buf
+                    self.request.send(buf)
+                    buf = s.recv(4096)
+
+                header += buf
+                if 'Content-Length: '.encode() in header:
+                    length = re.match(buf).group(1) - (len(header) - header.index('\r\n\r\n') - 4)
+
+                if length == -1:
+                    self.recvChunk(buf, "".encode())
+                else:
+                    recvLength(buf, length)
+
+    def recvChunk(self, buf, prev):
+        while '\r\n0\r\n\r\n'.encode() not in (prev + buf):
+            prev = buf[-5:]
+            self.request.send(buf)
+            buf = s.recv(4096)
+
+        self.request.send(buf)
+
+    def recvLength(self, buf, remaining):
+        while remaning > 0:
+            self.request.send(buf)
+            buf = s.recv(4096)
+            remaining -= len(buf)
+
+        self.request.send(buf)
 
 class ForkHTTPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
     pass

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import socketserver as SocketServer
+import socketserver
 import socket
 from collections import namedtuple
 import threading
+import struct
 import sys
 import getopt
 '''
@@ -12,7 +13,7 @@ for load-balancing and performance
 @license AGPLv3
 '''
 
-class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
+class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     '''
         handler for incoming packets for this server,
         assumes that we will receive DNS messages
@@ -25,17 +26,23 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
 
     SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
 
+
     def handle(self):
         print("got stuff")
+        print(str(self.request))
         #request is the socket
-        packet = self.request.recv(DNS_PKT_SIZE)
-        content = __unpack_dns_pkt(pkt)
-        self.request.sendall(__pack_dns_response(content))
+        self.data = self.request[0]
+        self.sock = self.request[1]
+
+
+        print(self.data)
+        content = self.__unpack_dns_pkt(self.data[:12])
+        self.sock.sendto(self.__handle_dns_response(content), self.client_address)
 
 
     #stuff
     def __unpack_dns_pkt(self, pkt):
-        tmp = struct.unpack(DNS_FMT, pkt)
+        tmp = struct.unpack(self.DNS_FMT, pkt)
         qr = ((tmp[1] >> 7) & 1)
         opcode = ((tmp[1] >> 3) & 0x7)
         aa = ((tmp[1] >> 2) & 1)
@@ -43,26 +50,23 @@ class ThreadedDNSRequestHandler(SocketServer.BaseRequestHandler):
         rd = (tmp[1] & 1)
         ra = ((tmp[2] >> 7) & 1)
         rcode = (tmp[2] & 0x7)
-        data = pkt[calcsize(self.DNS_FMT):]
+        data = pkt[struct.calcsize(self.DNS_FMT):]
         print(data)
-        return DNS_UNPK(pkt_id=tmp[0], qr=qr, opcode=opcode, aa=aa, tc=tc, rd=rd, ra=ra, rcode=rcode, qdcount=tmp[3], ancount=tmp[4], nscount=tmp[5], arcount=tmp[6], data=data)
-
-    def __handle_dns_question(self, pkt):
-        pass
+        return self.DNS_UNPK(pkt_id=tmp[0], qr=qr, opcode=opcode, aa=aa, tc=tc, rd=rd, ra=ra, rcode=rcode, qdcount=tmp[3], ancount=tmp[4], nscount=tmp[5], arcount=tmp[6], data=data)
 
     def __handle_dns_response(self, content):
-        return __pack_dns(content.pk_id, content.qr, content.opcode, content.aa,
-                content.tc, content.rd, content.ra, content.rcode, content.qdcode,
+        return self.__pack_dns(content.pkt_id, content.qr, content.opcode, content.aa,
+                content.tc, content.rd, content.ra, content.rcode, content.qdcount,
                 content.ancount, content.nscount, content.arcount)
 
     def __pack_dns_response(self, content):
         pass
-    def __pack_dns(pkt_id, qr, opcode, aa, tc, rd, ra, rcode, qdcount, ancount, nscount, arcount):
+    def __pack_dns(self, pkt_id, qr, opcode, aa, tc, rd, ra, rcode, qdcount, ancount, nscount, arcount):
         flags1 = (qr << 7) | (opcode << 3) | (aa << 2) | (tc << 1) | rd
         flags2 = (ra << 7) | rcode
-        return struct.pack(DNS_FMT, pkt_id, flags1, flags2, qdcount, ancount, nscount, arcount) + struct.pack("!s", SERVER.encode())
+        return struct.pack(self.DNS_FMT, pkt_id, flags1, flags2, qdcount, ancount, nscount, arcount) + struct.pack("!s", self.SERVER.encode())
 
-class ThreadedDNSServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
+class ThreadedDNSServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     '''
         Multi-threaded server for performance, should make things faster
         Gonna just go with all the inherited stuff, so nothing is here!
@@ -88,8 +92,8 @@ class DNSServerFront(object):
 
         self.server.serve_forever()
 
-        self.server.shutdown()
-        self.server.server_close()
+        #self.server.shutdown()
+        #self.server.server_close()
 
 if __name__ == "__main__":
 

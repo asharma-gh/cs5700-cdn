@@ -29,9 +29,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     ### This stuff is hard-coded. will only work with this domain
     CNAME = 'cs5700cdnexamplecom'
     CNAME_LEN = 21
-    
-    qtype = 0
-    qclass = 0
+
     Q_PKT = ''
     def handle(self):
        # print("got stuff")
@@ -53,19 +51,14 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         cname = pkt[13: 13 + self.CNAME_LEN + 1].decode("utf-8")
         print("CNAME: ")
         print(cname)
-        [self.qtype, self.qclass] = struct.unpack(">HH", pkt[13 + self.CNAME_LEN + 2 : 13 + self.CNAME_LEN + 6])
-        print("qtyle: ")
-        print(self.qtype)
-        print("qclass: ")
-        print(self.qclass)
-        self.Q_PKT = pkt[13 : 13 + self.CNAME_LEN + 6]
+        self.Q_PKT = pkt[12 : 13 + self.CNAME_LEN + 6]
         return unpk
 
 
     def __handle_dns_response(self, content):
         print("Got content")
         print(content)
-        return self.__pack_dns(content[0], 0x8180, 1, 0, content[4], content[5])
+        return self.__pack_dns(content[0], 0x8180, content[2], 1, content[4], 0)
 
 
     def __make_dns_answer(self, ip):

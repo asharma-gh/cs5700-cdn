@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import socketserver
 import socket
 from collections import namedtuple
@@ -27,10 +28,11 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     SERVER_IP = '123.123.123'
 
     ### This stuff is hard-coded. will only work with this domain
-    CNAME = 'cs5700cdnexamplecom'
+    CNAME = "cs5700cdnexamplecom"
     CNAME_LEN = 21
-
+    #qname part of packet
     Q_PKT = ''
+
     def handle(self):
        # print("got stuff")
         #request is the socket
@@ -41,6 +43,10 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         print("size")
         print(len(self.data))
         content = self.__unpack_dns_pkt(self.data)
+        if (content == -1):
+            print("Bad request")
+            return
+
         self.sock.sendto(self.__handle_dns_response(content), self.client_address)
 
 
@@ -48,7 +54,14 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     def __unpack_dns_pkt(self, pkt):
         unpk = struct.unpack(self.DNS_FMT, pkt[0:12])
 
-        cname = pkt[13: 13 + self.CNAME_LEN + 1].decode("utf-8")
+        cname = pkt[13: 13 + self.CNAME_LEN].decode("utf-8")
+        cname = ''.join(filter(str.isalnum, cname))
+        print("|" + cname + "|" )
+        print("|" + self.CNAME + "|")
+
+        print(cname == self.CNAME)
+        if (not cname == self.CNAME):
+            return -1
         print("CNAME: ")
         print(cname)
         self.Q_PKT = pkt[12 : 13 + self.CNAME_LEN + 6]

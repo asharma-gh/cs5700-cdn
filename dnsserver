@@ -24,10 +24,15 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
 
     SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
+    SERVER_IP = '123.123.123'
 
-    CNAME = 'cs5700cdn.example.com'
+    ### This stuff is hard-coded. will only work with this domain
+    CNAME = 'cs5700cdnexamplecom'
     CNAME_LEN = 21
-
+    
+    qtype = 0
+    qclass = 0
+    Q_PKT = ''
     def handle(self):
        # print("got stuff")
         #request is the socket
@@ -41,22 +46,38 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         self.sock.sendto(self.__handle_dns_response(content), self.client_address)
 
 
-    #stuff
+    #unpacks dns and makes question pkt
     def __unpack_dns_pkt(self, pkt):
         unpk = struct.unpack(self.DNS_FMT, pkt[0:12])
 
-        cname = pkt[13:23].decode("utf-8")
+        cname = pkt[13: 13 + self.CNAME_LEN + 1].decode("utf-8")
         print("CNAME: ")
         print(cname)
+        [self.qtype, self.qclass] = struct.unpack(">HH", pkt[13 + self.CNAME_LEN + 2 : 13 + self.CNAME_LEN + 6])
+        print("qtyle: ")
+        print(self.qtype)
+        print("qclass: ")
+        print(self.qclass)
+        self.Q_PKT = pkt[13 : 13 + self.CNAME_LEN + 6]
         return unpk
+
 
     def __handle_dns_response(self, content):
         print("Got content")
         print(content)
-        return self.__pack_dns(content[0], content[1], content[2], content[3], content[4], content[5])
+        return self.__pack_dns(content[0], 0x8180, 1, 0, content[4], content[5])
+
+
+    def __make_dns_answer(self, ip):
+        return struct.pack(">HHHLH4s", 0xc00c, 0x0001, 0x0001, 100, 4, socket.inet_aton(ip))
+
 
     def __pack_dns(self, pkt_id, flags, qdcount, ancount, nscount, arcount):
-        return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) + struct.pack("!s", self.SERVER.encode())
+        return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) + self.Q_PKT +  self.__make_dns_answer(self.SERVER_IP)
+
+
+
+
 
 class ThreadedDNSServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     '''

@@ -8,6 +8,7 @@ import struct
 import random
 import sys
 import getopt
+import subprocess
 
 SCAMPER_PORT = 60123
 
@@ -21,7 +22,15 @@ class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
         sock.sendto(time, self.client_address)
 
     def __get_time(self, ip):
-        return 0
+        scamper_cmd = "scamper -c 'ping -c 1' -i " + ip
+        res = subprocess.getoutput(scamper_cmd)
+        lines = res.split('\n')
+        if (lines.len < 5):
+            return "99999"
+        mline = lines[4]
+        avg = mline[40:46]
+        print("Average from this: " + avg)
+        return avg
 
 
 class ThreadedScamperServer(socketserver.ThreadingMixIn, socketserver.UDPServer):

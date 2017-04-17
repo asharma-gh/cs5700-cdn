@@ -5,6 +5,7 @@ import socket
 from collections import namedtuple
 import threading
 import struct
+import random
 import sys
 import getopt
 '''
@@ -24,8 +25,19 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_FMT = ">HHHHHH"
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
 
-    SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
-    SERVER_IP = '123.123.10.238'
+    #SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
+    #SERVER_IP = '123.123.10.238'
+    SERVER_LIST ={
+                'ec2-52-90-80-45.compute-1.amazonaws.com' : '54.84.248.26',
+                'ec2-54-183-23-203.us-west-1.compute.amazonaws.com' : '54.183.23.203',
+                'ec2-54-70-111-57.us-west-2.compute.amazonaws.com' : '54.70.111.57',
+                'ec2-52-215-87-82.eu-west-1.compute.amazonaws.com' : '52.215.87.82',
+                'ec2-52-28-249-79.eu-central-1.compute.amazonaws.com' : '52.28.249.79',
+                'ec2-54-169-10-54.ap-southeast-1.compute.amazonaws.com' : '54.169.10.54',
+                'ec2-52-62-198-57.ap-southeast-2.compute.amazonaws.com' : '52.62.198.57',
+                'ec2-52-192-64-163.ap-northeast-1.compute.amazonaws.com' : '52.192.64.163',
+                'ec2-54-233-152-60.sa-east-1.compute.amazonaws.com' : '54.233.152.60' 
+                }
 
     ### This stuff is hard-coded. will only work with this domain
     CNAME = "cs5700cdnexamplecom"
@@ -81,7 +93,9 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
 
 
     def __pack_dns(self, pkt_id, flags, qdcount, ancount, nscount, arcount):
-        return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) + self.Q_PKT +  self.__make_dns_answer(self.SERVER_IP)
+        return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) \
+                + self.Q_PKT \
+                +  self.__make_dns_answer(self.SERVER_LIST[random.choice(list(self.SERVER_LIST.keys()))])
 
 
 

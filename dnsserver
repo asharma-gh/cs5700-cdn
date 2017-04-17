@@ -45,10 +45,10 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         print(len(self.data))
         content = self.__unpack_dns_pkt(self.data)
         if (content == -1):
-            print("Bad request")
+            print("Bad request, echoing back")
+            self.sock.sendto(self.data, self.client_address)
             return
-        #self.sock.sendto(self.data, self.client_address)
-        self.sock.sendto(self.__handle_dns_response(content), self.client_address)
+                self.sock.sendto(self.__handle_dns_response(content), self.client_address)
 
 
     #unpacks dns and makes question pkt

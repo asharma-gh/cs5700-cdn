@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+
+import socketserver
+import socket
+from collections import namedtuple
+import threading
+import struct
+import random
+import sys
+import getopt
+
+SCAMPER_PORT = 60123
+
+class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        data = self.request[0]
+        sock = self.request[1]
+        ip = data.strip()
+        print("Got this IP: "+ str(ip))
+        time = __get_time(ip)
+        sock.sendto(time, self.client_address)
+
+    def __get_time(self, ip):
+        return 0
+
+
+class ThreadedScamperServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
+    pass
+
+class ScamperServerFront(object):
+    server = 0
+
+    def __init__(self, host):
+        self.server = ThreadedScamperServer((host, SCAMPER_PORT), ScamperServerRequestHandler)
+        server_thread = threading.Thread(target=self.server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+        print("Server started")
+
+        self.server.serve_forever()
+
+        self.server.shutdown()
+        self.server.server_close()
+
+
+if __name__ == "__main__":
+    print("Starting scamper server")
+    foo = ScamperServerFront("")

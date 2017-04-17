@@ -25,8 +25,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_FMT = ">HHHHHH"
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
 
-    #SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
-    #SERVER_IP = '123.123.10.238'
+    SCAMPER_PORT = 60123
     SERVER_LIST ={
                 'ec2-52-90-80-45.compute-1.amazonaws.com' : '54.84.248.26',
                 'ec2-54-183-23-203.us-west-1.compute.amazonaws.com' : '54.183.23.203',
@@ -61,7 +60,31 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
             self.sock.sendto(self.data, self.client_address)
             return
         self.sock.sendto(self.__handle_dns_response(content), self.client_address)
+    
 
+    server_latency = {}
+    ##
+    ## Finds best replica using active measurements
+    ## pings from each replica server to client
+    ## 
+    def __find_best_replica(self, clientip):
+        for key in SERVER_LIST:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # host is replica server
+            hostip = socket.gethostbyname(key)
+            try:
+                ## connect to scamper server in replica
+                sock.connect((hostip, SCAMPER_PORT))
+                ## send clientip to scamper server
+                sock.sendall(clientip)
+                ## get latency back
+                server_latency[key] = sock.recv(1024)
+                print(str(server_latency[key]))
+            except socket.error as err:
+                print("Error connecting active measurement: " + str(err))
+                server_latency[key] = 9999999
+
+        return 0
 
     #unpacks dns and makes question pkt
     def __unpack_dns_pkt(self, pkt):
@@ -82,21 +105,21 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         return unpk
 
 
-    def __handle_dns_response(self, content):
+    def __handle_dns_response(self, content, ip):
         print("Got content")
         print(content)
-        return self.__pack_dns(content[0], 0x8180, content[2], 1, content[4], content[5])
+        return self.__pack_dns(content[0], 0x8180, content[2], 1, content[4], content[5], ip)
 
 
     def __make_dns_answer(self, ip):
         return struct.pack(">HHHLH4s", 0xc00c, 0x0001, 0x0001, 60, 4, socket.inet_aton(ip))
 
 
-    def __pack_dns(self, pkt_id, flags, qdcount, ancount, nscount, arcount):
+    def __pack_dns(self, pkt_id, flags, qdcount, ancount, nscount, arcount, ip):
+        best_server = __find_best_replica(ip)
         return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) \
                 + self.Q_PKT \
                 +  self.__make_dns_answer(self.SERVER_LIST[random.choice(list(self.SERVER_LIST.keys()))])
-
 
 
 

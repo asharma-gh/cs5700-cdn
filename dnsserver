@@ -91,8 +91,9 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
             finally:
                 sock.close()
             if (best_server == ''):
-                ## return default server
-                return '54.84.248.26'
+                ## an error must have occured
+                ## return random server
+                return self.SERVER_LIST[random.choice(list(self.SERVER_LIST.keys()))]
 
         return best_server
 
@@ -129,7 +130,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         best_server = self.__find_best_replica(ip)
         return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) \
                 + self.Q_PKT \
-                +  self.__make_dns_answer(self.SERVER_LIST[random.choice(list(self.SERVER_LIST.keys()))])
+                +  self.__make_dns_answer(best_server)
 
 
 

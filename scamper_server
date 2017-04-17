@@ -10,7 +10,6 @@ import sys
 import getopt
 import subprocess
 
-SCAMPER_PORT = 60123
 
 class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
@@ -25,7 +24,7 @@ class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
         scamper_cmd = "scamper -c 'ping -c 1' -i " + ip
         res = subprocess.getoutput(scamper_cmd)
         lines = res.split('\n')
-        if (lines.len < 5):
+        if (len(lines) < 5):
             return "99999"
         mline = lines[4]
         avg = mline[39:45]
@@ -38,9 +37,10 @@ class ThreadedScamperServer(socketserver.ThreadingMixIn, socketserver.UDPServer)
 
 class ScamperServerFront(object):
     server = 0
+    SCAMPER_PORT = 60123
 
     def __init__(self, host):
-        self.server = ThreadedScamperServer((host, SCAMPER_PORT), ScamperServerRequestHandler)
+        self.server = ThreadedScamperServer((host, self.SCAMPER_PORT), ScamperServerRequestHandler)
         server_thread = threading.Thread(target=self.server.serve_forever)
         server_thread.daemon = True
         server_thread.start()

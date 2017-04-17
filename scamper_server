@@ -28,7 +28,7 @@ class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
         if (lines.len < 5):
             return "99999"
         mline = lines[4]
-        avg = mline[40:46]
+        avg = mline[39:45]
         print("Average from this: " + avg)
         return avg
 

@@ -25,16 +25,17 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
 
     SERVER = 'ec2-52-90-80-45.compute-1.amazonaws.com'
-    SERVER_IP = '123.123.123'
+    SERVER_IP = '123.123.10.238'
 
     ### This stuff is hard-coded. will only work with this domain
     CNAME = "cs5700cdnexamplecom"
+    DOMAIN = "cs5700cdn.example.com"
     CNAME_LEN = 21
     #qname part of packet
-    Q_PKT = ''
+    Q_PKT = 0
 
     def handle(self):
-       # print("got stuff")
+        print("got stuff")
         #request is the socket
         self.data = self.request[0]
         self.sock = self.request[1]
@@ -46,7 +47,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         if (content == -1):
             print("Bad request")
             return
-
+        #self.sock.sendto(self.data, self.client_address)
         self.sock.sendto(self.__handle_dns_response(content), self.client_address)
 
 
@@ -64,22 +65,32 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
             return -1
         print("CNAME: ")
         print(cname)
-        self.Q_PKT = pkt[12 : 13 + self.CNAME_LEN + 6]
+        ## build query
+     #   q_pkt = pkt[12:]
+     #   qtype = 0
+     #   qclass = 0
+      #  [qtype, qclass] = struct.unpack('>HH', q_pkt[-4:])
+        # make qname
+      #  q = ''.join(chr(len(x)) + x for x in self.DOMAIN.split('.'))
+      #  q += '\x00'  # add end symbol
+      #  test = q + struct.pack('>HH', qtype, qclass)
+        self.Q_PKT = pkt[12 : 13 + self.CNAME_LEN + 5]
         return unpk
 
 
     def __handle_dns_response(self, content):
         print("Got content")
         print(content)
-        return self.__pack_dns(content[0], 0x8180, content[2], 1, content[4], 0)
+        return self.__pack_dns(content[0], 0x8180, content[2], 1, content[4], content[5])
 
 
     def __make_dns_answer(self, ip):
-        return struct.pack(">HHHLH4s", 0xc00c, 0x0001, 0x0001, 100, 4, socket.inet_aton(ip))
+        return struct.pack(">HHHLH4s", 0xc00c, 0x0001, 0x0001, 60, 4, socket.inet_aton(ip))
 
 
     def __pack_dns(self, pkt_id, flags, qdcount, ancount, nscount, arcount):
         return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) + self.Q_PKT +  self.__make_dns_answer(self.SERVER_IP)
+        #return self.data[0:12] + self.Q_PKT + self.__make_dns_answer(self.SERVER_IP)
 
 
 

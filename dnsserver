@@ -66,14 +66,6 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         print("CNAME: ")
         print(cname)
         ## build query
-     #   q_pkt = pkt[12:]
-     #   qtype = 0
-     #   qclass = 0
-      #  [qtype, qclass] = struct.unpack('>HH', q_pkt[-4:])
-        # make qname
-      #  q = ''.join(chr(len(x)) + x for x in self.DOMAIN.split('.'))
-      #  q += '\x00'  # add end symbol
-      #  test = q + struct.pack('>HH', qtype, qclass)
         self.Q_PKT = pkt[12 : 13 + self.CNAME_LEN + 5]
         return unpk
 
@@ -90,7 +82,6 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
 
     def __pack_dns(self, pkt_id, flags, qdcount, ancount, nscount, arcount):
         return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) + self.Q_PKT +  self.__make_dns_answer(self.SERVER_IP)
-        #return self.data[0:12] + self.Q_PKT + self.__make_dns_answer(self.SERVER_IP)
 
 
 

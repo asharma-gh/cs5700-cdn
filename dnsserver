@@ -161,8 +161,8 @@ class DNSServerFront(object):
 
         self.server.serve_forever()
 
-        #self.server.shutdown()
-        #self.server.server_close()
+        self.server.shutdown()
+        self.server.server_close()
 
 if __name__ == "__main__":
 

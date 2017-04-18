@@ -1,6 +1,6 @@
 #!/bin/bash
 
-while getopts "u:i:" opt; do
+while getopts "u:i:n:p:o:" opt; do
   case $opt in
     u)
       USER=$OPTARG
@@ -11,13 +11,12 @@ while getopts "u:i:" opt; do
   esac
 done
 
-#echo $USER
-#echo $KEY
 scp -i $KEY dnsserver Makefile $USER@cs5700cdnproject.ccs.neu.edu:~
 ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu 'make dns'
 
 while read line
 do
-    scp -i $KEY httpserver Makefile $USER@$line:~
+    scp -r -i $KEY httpserver Makefile scamper_server $USER@$line:~
+    #scp -r -i $KEY httpserver Makefile scamper_server www $USER@$line:~
     ssh -n -i $KEY $USER@$line 'make http'
 done < serverlist.txt

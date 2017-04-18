@@ -20,10 +20,10 @@ while getopts "u:i:n:p:o:" opt; do
   esac
 done
 
-ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu "~/dnsserver -p \"$PORT\" -n \"$NAME\" &" &
+ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu "/usr/sbin/fuser -k $PORT/udp"
 
 while read line
 do
-    #echo $line
-    ssh -n -i $KEY $USER@$line "~/httpserver -p \"$PORT\" -o \"$ORIGIN\" & ~/scamper_server -p \"$PORT\" &" &
+    echo $line
+    ssh -n -i $KEY $USER@$line "fuser -k $PORT/tcp && fuser -k $PORT/udp"
 done < serverlist.txt

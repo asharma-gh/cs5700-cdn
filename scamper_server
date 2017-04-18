@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 import socketserver
 import socket
@@ -37,10 +37,8 @@ class ThreadedScamperServer(socketserver.ThreadingMixIn, socketserver.UDPServer)
 
 class ScamperServerFront(object):
     server = 0
-    SCAMPER_PORT = 60123
-
-    def __init__(self, host):
-        self.server = ThreadedScamperServer((host, self.SCAMPER_PORT), ScamperServerRequestHandler)
+    def __init__(self, host, port):
+        self.server = ThreadedScamperServer((host, port), ScamperServerRequestHandler)
         server_thread = threading.Thread(target=self.server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
@@ -54,4 +52,8 @@ class ScamperServerFront(object):
 
 if __name__ == "__main__":
     print("Starting scamper server")
-    foo = ScamperServerFront("")
+    optlist, _ = getopt.getopt(sys.argv[1:], 'p:n:')
+    for opt in optlist:
+        if opt[0] == '-p':
+            port = int(opt[1])
+    foo = ScamperServerFront("", port)

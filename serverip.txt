@@ -1,0 +1,9 @@
+ec2-52-90-80-45.compute-1.amazonaws.com : 54.84.248.26
+ec2-54-183-23-203.us-west-1.compute.amazonaws.com : 54.183.23.203
+ec2-54-70-111-57.us-west-2.compute.amazonaws.com : 54.70.111.57
+ec2-52-215-87-82.eu-west-1.compute.amazonaws.com : 52.215.87.82
+ec2-52-28-249-79.eu-central-1.compute.amazonaws.com : 52.28.249.79
+ec2-54-169-10-54.ap-southeast-1.compute.amazonaws.com : 54.169.10.54
+ec2-52-62-198-57.ap-southeast-2.compute.amazonaws.com : 52.62.198.57
+ec2-52-192-64-163.ap-northeast-1.compute.amazonaws.com : 52.192.64.163
+ec2-54-233-152-60.sa-east-1.compute.amazonaws.com : 54.233.152.60

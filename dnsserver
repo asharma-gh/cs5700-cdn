@@ -174,5 +174,10 @@ class DNSServerFront(object):
 
 if __name__ == "__main__":
     print("PORT:")
-    print(port)
-    foo = DNSServerFront("localhost", port)
+    print(port)    
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    print(s.getsockname()[0])
+    host = s.getsockname()[0]
+    s.close()
+    foo = DNSServerFront(host, port)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3.4
 
 import socketserver
 import socket
@@ -15,6 +15,13 @@ for load-balancing and performance
 @license AGPLv3
 '''
 
+optlist, _ = getopt.getopt(sys.argv[1:], 'p:n:')
+for opt in optlist:
+    if opt[0] == '-p':
+        port = int(opt[1])
+    elif opt[0] == '-n':
+        name = opt[1]
+
 class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     '''
         handler for incoming packets for this server,
@@ -24,8 +31,9 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_PKT_SIZE = 512
     DNS_FMT = ">HHHHHH"
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
+    global port
+    SCAMPER_PORT = port
 
-    SCAMPER_PORT = 60123
     SERVER_LIST ={
                 'ec2-52-90-80-45.compute-1.amazonaws.com' : '54.84.248.26',
                 'ec2-54-183-23-203.us-west-1.compute.amazonaws.com' : '54.183.23.203',
@@ -35,7 +43,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
                 'ec2-54-169-10-54.ap-southeast-1.compute.amazonaws.com' : '54.169.10.54',
                 'ec2-52-62-198-57.ap-southeast-2.compute.amazonaws.com' : '52.62.198.57',
                 'ec2-52-192-64-163.ap-northeast-1.compute.amazonaws.com' : '52.192.64.163',
-                'ec2-54-233-152-60.sa-east-1.compute.amazonaws.com' : '54.233.152.60' 
+                'ec2-54-233-152-60.sa-east-1.compute.amazonaws.com' : '54.233.152.60'
                 }
 
     ### This stuff is hard-coded. will only work with this domain
@@ -60,12 +68,12 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
             self.sock.sendto(self.data, self.client_address)
             return
         self.sock.sendto(self.__handle_dns_response(content, self.client_address[0]), self.client_address)
-    
+
 
     ##
     ## Finds best replica using active measurements
     ## pings from each replica server to client
-    ## 
+    ##
     def __find_best_replica(self, clientip):
         print("finding best replica...")
         lowest_latency = 999990
@@ -165,13 +173,6 @@ class DNSServerFront(object):
         #self.server.server_close()
 
 if __name__ == "__main__":
-
-    optlist, _ = getopt.getopt(sys.argv[1:], 'p:n:')
-    for opt in optlist:
-        if opt[0] == '-p':
-            port = int(opt[1])
-        elif opt[0] == '-n':
-            name = opt[1]
     print("PORT:")
     print(port)
     foo = DNSServerFront("localhost", port)

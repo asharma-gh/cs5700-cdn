@@ -26,4 +26,6 @@ while read line
 do
     echo $line
     ssh -n -i $KEY $USER@$line "fuser -k $PORT/tcp && fuser -k $PORT/udp"
+    ssh -n -i $KEY $USER@$line "fuser -k 40029/tcp"
+
 done < serverlist.txt

@@ -25,7 +25,7 @@ while read line
 do
     echo $line
     ssh -i $KEY -f $USER@$line "sh -c './httpserver -p $PORT -o $ORIGIN > /dev/null 2>&1 &'"
-    ssh -i $KEY -f $USER@$line "sh -c './scamper_server -p $PORT > /dev/null 2>&1 &'"
+    ssh -i $KEY -f $USER@$line "sh -c './scamper_server -p 40029 > /dev/null 2>&1 &'"
 done < serverlist.txt
 echo "running dns server..."
 

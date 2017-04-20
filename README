@@ -32,3 +32,39 @@ Chris:
 - deployCDN script
 - stopCDN
 - http server and functionality
+
+Design Decisions:
+
+------------------------------------
+|         EC2 Replica Servers      |
+|   ---------------- ------------- |
+|   |Scamper Server| |HTTP Server| |
+|   ---------------- ------------- |
+|    /|\                 /|\       |
+------|-------------------|---------
+      |                   |
+      |                   |
+      |                   |
+-------------             |
+| DNS Server|             |
+-------------             |
+         /|\              |
+          ------ ----------
+               | |
+            --------
+            |Client|
+            --------
+
+In our design, which is primarily based off of the testing methedology, the client requests the location of cs5700cdn.example.com
+thru the dnsserver and connects to the http server returned in the dns response.
+
+The primary design decision we made was to create a scamper server in order to aid in active measurements. We felt that in order to determine
+the best replica server for a client, we must ping the client from each replica, and select the one with the lowest latency. The Scamper server,
+which runs on each replica server, allows us the do exactly that.
+
+The Scamper Server takes in the IP of the client in a UDP packet and runs scamper to ping that IP. The average latency is then sent back. The DNS Server goes thru each replica server and sends the client IP to that replica's scamper server. It then selects the best replica based on the lowest average time. If all the scamper servers had an error, then a random replica server is selected. We felt the need to do this because the scamper server is independent of the http server, so by sending back an IP the client could still potentially connect to an httpserver, making our service more available. 
+
+In addition to dynamic IP redirection, our DNS server caches information for each IP, so that multiple DNS lookups do not put extra load on the scamper servers, increasing performance.
+
+Our http server's cache is based on the zipf distribution. We felt that since the most popular content should be in the cache at all times, so we keep it on disk in the replica servers. Since the content is static, we don't need to worry about it getting stale and so we feel this would result in the highest performance. For other content, -- TODO
+

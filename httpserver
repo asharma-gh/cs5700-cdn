@@ -2,14 +2,13 @@
 
 import getopt
 import socketserver
-import socket
 import mmap
 import sys
 import os
 import threading
 import hashlib
 import glob
-import re
+import http.client
 
 optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
 for opt in optlist:
@@ -18,22 +17,15 @@ for opt in optlist:
     elif opt[0] == '-o':
         origin = opt[1]
 
-cache = {}
+conn = http.client.HTTPConnection(origin + ":8080")
 
+cache = {}
 files = glob.glob("www/*")
 for f in files:
     opened = open(f, "r+b")
-    #TODO change from mmap?
     cache[f[4:]] = mmap.mmap(opened.fileno(), 0)
 
-s = socket.socket()
-s.connect((origin, 8080))
-regex = re.compile('Content-Length: (\d+)')
-
 class HTTPRequest(socketserver.BaseRequestHandler):
-    def __init__(self, request, client_address, server):
-        super().__init__(request, client_address, server)
-
     def handle(self):
         self.data = self.request.recv(1024).strip()
         command, path, version = self.data.split('\r\n'.encode())[0].split()
@@ -45,45 +37,21 @@ class HTTPRequest(socketserver.BaseRequestHandler):
                 self.request.sendall(response.read())
                 response.seek(0)
             else:
-                global origin
-                global s
-                global re
-                s.send(b"GET " + path + b" HTTP/1.1\r\nHost: " + \
-                        origin.encode() + b":8080\r\n\r\n")
-                data = []
-                #TODO fix?
-                buf = s.recv(4096)
-                length = -1
-                header = "".encode()
-                while "\r\n\r\n".encode() not in buf:
-                    header += buf
-                    self.request.send(buf)
-                    buf = s.recv(4096)
+                global origin, conn
+                conn.request("GET", path.decode())
+                r = conn.getresponse()
+                headers = r.getheaders()
+                body = r.read().decode()
+                if r.getheader('Transfer-Encoding') == "chunked":
+                    headers.remove(('Transfer-Encoding', 'chunked'))
 
-                header += buf
-                if 'Content-Length: '.encode() in header:
-                    length = re.match(buf).group(1) - (len(header) - header.index('\r\n\r\n') - 4)
-
-                if length == -1:
-                    self.recvChunk(buf, "".encode())
+                header_str = '\r\n'.join("{}: {}".format(key, val) for key, val in headers)
+                if r.getheader('Content-Length') != None:
+                    header_str += ("Content-Length: " + len(body) + "\r\n\r\n")
                 else:
-                    recvLength(buf, length)
+                    header_str += "\r\n\r\n"
 
-    def recvChunk(self, buf, prev):
-        while '\r\n0\r\n\r\n'.encode() not in (prev + buf):
-            prev = buf[-5:]
-            self.request.send(buf)
-            buf = s.recv(4096)
-
-        self.request.send(buf)
-
-    def recvLength(self, buf, remaining):
-        while remaning > 0:
-            self.request.send(buf)
-            buf = s.recv(4096)
-            remaining -= len(buf)
-
-        self.request.send(buf)
+                self.request.sendall(("HTTP/1.1 " + str(r.status) + " " + r.reason + "\r\n" + header_str + body).encode())
 
 class ForkHTTPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
     pass

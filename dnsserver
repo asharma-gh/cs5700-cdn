@@ -33,7 +33,6 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
     global port
     SCAMPER_PORT = port
-
     SERVER_LIST ={
                 'ec2-52-90-80-45.compute-1.amazonaws.com' : '54.84.248.26',
                 'ec2-54-183-23-203.us-west-1.compute.amazonaws.com' : '54.183.23.203',
@@ -45,6 +44,8 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
                 'ec2-52-192-64-163.ap-northeast-1.compute.amazonaws.com' : '52.192.64.163',
                 'ec2-54-233-152-60.sa-east-1.compute.amazonaws.com' : '54.233.152.60'
                 }
+
+    server_cache = {}
 
     ### This stuff is hard-coded. will only work with this domain
     CNAME = "cs5700cdnexamplecom"
@@ -135,7 +136,12 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
 
 
     def __pack_dns(self, pkt_id, flags, qdcount, ancount, nscount, arcount, ip):
-        best_server = self.__find_best_replica(ip)
+        best_server = 0
+        if ip in self.server_cache:
+            best_server = self.server_cache[ip]
+        else:
+            best_server = self.__find_best_replica(ip)
+            self.server_cache[ip] = best_server
         return struct.pack(self.DNS_FMT, pkt_id, flags, qdcount, ancount, nscount, arcount) \
                 + self.Q_PKT \
                 +  self.__make_dns_answer(best_server)

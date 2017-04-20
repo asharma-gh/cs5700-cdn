@@ -24,6 +24,6 @@ ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu "~/dnsserver -p \"$PORT\" -n \"$N
 
 while read line
 do
-    #echo $line
+    echo $line
     ssh -n -i $KEY $USER@$line "~/httpserver -p \"$PORT\" -o \"$ORIGIN\" & ~/scamper_server -p \"$PORT\" &" &
 done < serverlist.txt

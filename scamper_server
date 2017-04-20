@@ -13,15 +13,14 @@ import subprocess
 
 class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
-        data = self.request[0]
-        sock = self.request[1]
+        data = self.request.recv(1024).strip()
         ip = data.strip()
         print("Got this IP: "+ str(ip))
-        time = __get_time(ip)
-        sock.sendto(time, self.client_address)
+        time = self.__get_time(ip.decode("UTF-8"))
+        self.request.sendall(time.encode())
 
     def __get_time(self, ip):
-        scamper_cmd = "scamper -c 'ping -c 1' -i " + ip
+        scamper_cmd = "scamper -c \'ping -c 1\' -i " + ip
         res = subprocess.getoutput(scamper_cmd)
         lines = res.split('\n')
         if (len(lines) < 5):
@@ -32,7 +31,7 @@ class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
         return avg
 
 
-class ThreadedScamperServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
+class ThreadedScamperServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 class ScamperServerFront(object):
@@ -48,7 +47,6 @@ class ScamperServerFront(object):
 
         self.server.shutdown()
         self.server.server_close()
-
 
 if __name__ == "__main__":
     print("Starting scamper server")

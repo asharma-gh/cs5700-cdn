@@ -20,10 +20,13 @@ while getopts "u:i:n:p:o:" opt; do
   esac
 done
 
-ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu "~/dnsserver -p \"$PORT\" -n \"$NAME\" &"
-
+echo "running http server and scamper servers..."
 while read line
 do
     echo $line
-    ssh -n -i $KEY $USER@$line "~/httpserver -p \"$PORT\" -o \"$ORIGIN\" & ~/scamper_server -p \"$PORT\" &" &
+    ssh -i $KEY -f $USER@$line "sh -c './httpserver -p $PORT -o $ORIGIN > /dev/null 2>&1 &'"
+    ssh -i $KEY -f $USER@$line "sh -c './scamper_server -p 40029 > /dev/null 2>&1 &'"
 done < serverlist.txt
+echo "running dns server..."
+
+ssh -i $KEY -f $USER@cs5700cdnproject.ccs.neu.edu "sh -c './dnsserver -p $PORT -n $NAME > /dev/null 2>&1 &'"

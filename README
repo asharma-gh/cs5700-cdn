@@ -9,22 +9,62 @@ for these two servers, including active measurements on the dns server in order 
 
 Performance Enhancing Techniques so far:
 
-Right now we implemented caching on the http server. 
+- Caching on HTTP Server
+- Cache on DNS Server
+- Dynamic IP redirection on DNS Server based on Active Measurements
+    - Uses a scamper server running on replicas to ping client
+
 
 Challenges faced:
-
-Currently the largest challenge we are facing involves verifying that our servers are correct. Testing in a networked
-setting is a challenge in itself due to the large variety of situations that can occur that we are trying to take into
-account in our design. For example, we want to make sure that our http and dns server function properly in the face of 
-a crash, and can recover properly.
+- The most challenging part of this assignment is in the construction of DNS packets. There isn't much clear documentation on the subject and so much of what was done is hardcoded based on the assignment specifications and looking at the packet structure in wireshark.
+- The second challenge is utilizing scamper. Setting it up was pretty tricky and DNS look ups are a fair bit slower as a result of the extra overhead from connecting to the replicas to run scamper. 
+- The third challenge has to do with the runCDN script. Getting a process to run correctly in the background thru ssh turns out to be nontrivial. If we just used '&', then the process would hang, the best solution we found is based on this stackoverflow page: http://stackoverflow.com/questions/19996089/use-ssh-to-start-a-background-process-on-a-remote-server-and-exit-session
 
 Description of Work:
 
 Arvin:
 - runCDN script
 - DNS server and functionality
+- Scamper server
 - README
 
 Chris:
 - deployCDN script
+- stopCDN
 - http server and functionality
+
+Design Decisions:
+
+------------------------------------
+|         EC2 Replica Servers      |
+|   ---------------- ------------- |
+|   |Scamper Server| |HTTP Server| |
+|   ---------------- ------------- |
+|    /|\                 /|\       |
+------|-------------------|---------
+      |                   |
+      |                   |
+      |                   |
+-------------             |
+| DNS Server|             |
+-------------             |
+         /|\              |
+          ------ ----------
+               | |
+            --------
+            |Client|
+            --------
+
+In our design, which is primarily based off of the testing methedology, the client requests the location of cs5700cdn.example.com
+thru the dnsserver and connects to the http server returned in the dns response.
+
+The primary design decision we made was to create a scamper server in order to aid in active measurements. We felt that in order to determine
+the best replica server for a client, we must ping the client from each replica, and select the one with the lowest latency. The Scamper server,
+which runs on each replica server, allows us the do exactly that.
+
+The Scamper Server takes in the IP of the client in a UDP packet and runs scamper to ping that IP. The average latency is then sent back. The DNS Server goes thru each replica server and sends the client IP to that replica's scamper server. It then selects the best replica based on the lowest average time. If all the scamper servers had an error, then a random replica server is selected. We felt the need to do this because the scamper server is independent of the http server, so by sending back an IP the client could still potentially connect to an httpserver, making our service more available. 
+
+In addition to dynamic IP redirection, our DNS server caches information for each IP, so that multiple DNS lookups do not put extra load on the scamper servers, increasing performance.
+
+Our http server's cache is based on the zipf distribution. We felt that since the most popular content should be in the cache at all times, so we keep it on disk in the replica servers. Since the content is static, we don't need to worry about it getting stale and so we feel this would result in the highest performance. For other content, -- TODO
+

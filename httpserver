@@ -9,6 +9,7 @@ import threading
 import hashlib
 import glob
 import http.client
+import collections
 
 optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
 for opt in optlist:
@@ -18,6 +19,7 @@ for opt in optlist:
         origin = opt[1]
 
 conn = http.client.HTTPConnection(origin + ":8080")
+lock = threading.Lock()
 
 cache = {}
 files = glob.glob("www/*")
@@ -25,17 +27,49 @@ for f in files:
     opened = open(f, "r+b")
     cache[f[4:]] = mmap.mmap(opened.fileno(), 0)
 
+class LRU():
+    def __init__(self):
+        self.cache = collections.OrderedDict()
+        self.size = 0
+        self.lock = threading.Lock()
+
+    def get(self, key):
+        self.lock.acquire()
+        val = self.cache.pop(key)
+        self.cache[key] = val
+        self.lock.release()
+        return val
+
+    def has(self, key):
+        self.lock.acquire()
+        truth = key in self.cache
+        self.lock.release()
+        return truth
+
+    def set(self, key, value):
+        self.lock.acquire()
+        while (self.size + len(value)) > 2500000:
+            old = self.cache.popitem(last=False)
+            self.size -= len(old)
+        self.cache[key] = value
+        self.size += len(value)
+        self.lock.release()
+
+lru_cache = LRU()
+
 class HTTPRequest(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         command, path, version = self.data.split('\r\n'.encode())[0].split()
         if command == "GET".encode():
-            global cache
+            global cache, lru_cache, lock
             hashpath = hashlib.sha256(path).hexdigest()
             if hashpath in cache:
                 response = cache[hashpath]
                 self.request.sendall(response.read())
                 response.seek(0)
+            elif lru_cache.has(hashpath):
+                self.request.sendall(lru_cache.get(hashpath))
             else:
                 global origin, conn
                 conn.request("GET", path.decode())
@@ -51,15 +85,17 @@ class HTTPRequest(socketserver.BaseRequestHandler):
                 else:
                     header_str += "\r\n\r\n"
 
-                self.request.sendall(("HTTP/1.1 " + str(r.status) + " " + r.reason + "\r\n" + header_str + body).encode())
+                web_page = ("HTTP/1.1 " + str(r.status) + " " + r.reason + "\r\n" + header_str + body).encode()
+                self.request.sendall(web_page)
+                lru_cache.set(hashpath, web_page)
 
-class ForkHTTPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
+class ThreadHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 class HTTPServerFront(object):
     server = 0
     def __init__(self, host, port):
-        self.server = ForkHTTPServer((host, port), HTTPRequest)
+        self.server = ThreadHTTPServer((host, port), HTTPRequest)
 
         server_thread = threading.Thread(target=self.server.serve_forever)
         server_thread.daemon = True

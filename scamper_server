@@ -17,11 +17,11 @@ class ScamperServerRequestHandler(socketserver.BaseRequestHandler):
         sock = self.request[1]
         ip = data.strip()
         print("Got this IP: "+ str(ip))
-        time = __get_time(ip)
-        sock.sendto(time, self.client_address)
+        time = self.__get_time(ip.decode("UTF-8"))
+        sock.sendto(time.encode(), self.client_address)
 
     def __get_time(self, ip):
-        scamper_cmd = "scamper -c 'ping -c 1' -i " + ip
+        scamper_cmd = "scamper -c \'ping -c 1\' -i " + ip
         res = subprocess.getoutput(scamper_cmd)
         lines = res.split('\n')
         if (len(lines) < 5):

@@ -80,16 +80,18 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
         lowest_latency = 999990
         best_server = ''
         for key in self.SERVER_LIST:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # host is replica server
-            hostip = socket.gethostbyname(key)
+            hostip = socket.gethostbyname('ec2-52-90-80-45.compute-1.amazonaws.com')
             print("Host ip + " + hostip)
             try:
                 ## connect to scamper server in replica
                 sock.connect((hostip, self.SCAMPER_PORT))
+                print("Conneted to server...")
                 ## send clientip to scamper server
                 print("Client ip: " + clientip)
-                sock.sendall(clientip)
+                sock.sendall(clientip.encode())
+                print("Sent data..")
                 ## get latency back
                 server_latency = int(float(sock.recv(1024).strip()))
                 print("Latency: " + str(server_latency))

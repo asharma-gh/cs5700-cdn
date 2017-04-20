@@ -20,7 +20,7 @@ while getopts "u:i:n:p:o:" opt; do
   esac
 done
 
-ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu "~/dnsserver -p \"$PORT\" -n \"$NAME\" &" 
+ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu "~/dnsserver -p \"$PORT\" -n \"$NAME\" &"
 
 while read line
 do

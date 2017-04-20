@@ -9,22 +9,26 @@ for these two servers, including active measurements on the dns server in order 
 
 Performance Enhancing Techniques so far:
 
-Right now we implemented caching on the http server. 
+- Caching on HTTP Server
+- Cache on DNS Server
+- Dynamic IP redirection on DNS Server based on Active Measurements
+    - Uses a scamper server running on replicas to ping client
+
 
 Challenges faced:
-
-Currently the largest challenge we are facing involves verifying that our servers are correct. Testing in a networked
-setting is a challenge in itself due to the large variety of situations that can occur that we are trying to take into
-account in our design. For example, we want to make sure that our http and dns server function properly in the face of 
-a crash, and can recover properly.
+- The most challenging part of this assignment is in the construction of DNS packets. There isn't much clear documentation on the subject and so much of what was done is hardcoded based on the assignment specifications and looking at the packet structure in wireshark.
+- The second challenge is utilizing scamper. Setting it up was pretty tricky and DNS look ups are a fair bit slower as a result of the extra overhead from connecting to the replicas to run scamper. 
+- The third challenge has to do with the runCDN script. Getting a process to run correctly in the background thru ssh turns out to be nontrivial. If we just used '&', then the process would hang, the best solution we found is based on this stackoverflow page: http://stackoverflow.com/questions/19996089/use-ssh-to-start-a-background-process-on-a-remote-server-and-exit-session
 
 Description of Work:
 
 Arvin:
 - runCDN script
 - DNS server and functionality
+- Scamper server
 - README
 
 Chris:
 - deployCDN script
+- stopCDN
 - http server and functionality

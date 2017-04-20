@@ -49,11 +49,11 @@ class ScamperServerFront(object):
         self.server.shutdown()
         self.server.server_close()
 
-
 if __name__ == "__main__":
     print("Starting scamper server")
     optlist, _ = getopt.getopt(sys.argv[1:], 'p:n:')
     for opt in optlist:
         if opt[0] == '-p':
             port = int(opt[1])
+    print(__get_time("8.8.8.8"))
     foo = ScamperServerFront("", port)

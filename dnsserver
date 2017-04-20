@@ -34,7 +34,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     global port
     SCAMPER_PORT = port
     SERVER_LIST ={
-                'ec2-52-90-80-45.compute-1.amazonaws.com' : '54.84.248.26',
+                'ec2-52-90-80-45.compute-1.amazonaws.com' : '54.90.80.45',
                 'ec2-54-183-23-203.us-west-1.compute.amazonaws.com' : '54.183.23.203',
                 'ec2-54-70-111-57.us-west-2.compute.amazonaws.com' : '54.70.111.57',
                 'ec2-52-215-87-82.eu-west-1.compute.amazonaws.com' : '52.215.87.82',
@@ -83,10 +83,12 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # host is replica server
             hostip = socket.gethostbyname(key)
+            print("Host ip + " + hostip)
             try:
                 ## connect to scamper server in replica
                 sock.connect((hostip, self.SCAMPER_PORT))
                 ## send clientip to scamper server
+                print("Client ip: " + clientip)
                 sock.sendall(clientip)
                 ## get latency back
                 server_latency = int(float(sock.recv(1024).strip()))

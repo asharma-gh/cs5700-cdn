@@ -72,6 +72,7 @@ class HTTPRequest(socketserver.BaseRequestHandler):
                 self.request.sendall(lru_cache.get(hashpath))
             else:
                 global origin, conn
+                conn.connect()
                 conn.request("GET", path.decode())
                 r = conn.getresponse()
                 headers = r.getheaders()

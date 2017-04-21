@@ -86,7 +86,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
             print("Host ip + " + hostip)
             try:
                 ## connect to scamper server in replica
-                sock.connect((hostip, 40029))
+                sock.connect((hostip, self.SCAMPER_PORT))
                 print("Conneted to server...")
                 ## send clientip to scamper server
                 print("Client ip: " + clientip)

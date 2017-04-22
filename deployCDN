@@ -16,7 +16,7 @@ ssh -i $KEY $USER@cs5700cdnproject.ccs.neu.edu 'make dns'
 
 while read line
 do
-    scp -r -i $KEY httpserver Makefile scamper_server pre-cache.sh pre-cache.txt $USER@$line:~
+    scp -r -i $KEY httpserver Makefile pre-cache.sh pre-cache.txt $USER@$line:~
     ssh -n -i $KEY $USER@$line './pre-cache.sh &' &
     ssh -n -i $KEY $USER@$line 'make http'
 done < serverlist.txt

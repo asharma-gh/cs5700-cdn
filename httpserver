@@ -14,24 +14,24 @@ import time
 import subprocess
 import random
 
-optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
-for opt in optlist:
-    if opt[0] == '-p':
-        port = int(opt[1])
-    elif opt[0] == '-o':
-        origin = opt[1]
-
-conn = http.client.HTTPConnection(origin + ":8080")
-lock = threading.Lock()
-
-cache = {}
-
+#build the pre-cache from files on disk
 def build_cache(cache):
+    #build from files in www
     files = glob.glob("www/*")
     for f in files:
         opened = open(f, "r+b")
         cache[f[4:]] = opened.read()
 
+#applicable while cache is downloading or on server startup
+def update_cache(cache):
+    downloading = True
+    while downloading:
+        if os.path.isfile(".cache_done"):
+            downloading = False
+        build_cache(cache)
+        time.sleep(1)
+
+#class for a LRU cache (limited to 2.5MB)
 class LRU():
     def __init__(self):
         self.cache = collections.OrderedDict()
@@ -60,35 +60,31 @@ class LRU():
         self.size += len(value)
         self.lock.release()
 
-def update_cache(cache):
-    downloading = True
-    while downloading:
-        if os.path.isfile(".cache_done"):
-            downloading = False
-        build_cache(cache)
-        time.sleep(1)
-
-lru_cache = LRU()
-
+#the request handler class
 class HTTPRequest(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         command, path, version = self.data.split('\r\n'.encode())[0].split()
+        #if a get request is sent
         if command == "GET".encode():
-            global cache, lru_cache, lock
+            #hash the path
             hashpath = hashlib.sha256(path).hexdigest()
-            if hashpath in cache:
-                response = cache[hashpath]
+            #if in the pre-cache
+            if hashpath in self.server.cache:
+                response = self.sever.cache[hashpath]
                 self.request.sendall(response)
-            elif lru_cache.has(hashpath):
-                self.request.sendall(lru_cache.get(hashpath))
+            #if in the LRU cache
+            elif self.server.lru_cache.has(hashpath):
+                self.request.sendall(self.server.lru_cache.get(hashpath))
+            #if not in cache
             else:
-                global origin, conn
-                conn.connect()
-                conn.request("GET", path.decode())
-                r = conn.getresponse()
+                #GET the webpage
+                self.server.conn.connect()
+                self.server.conn.request("GET", path.decode())
+                r = self.server.conn.getresponse()
                 headers = r.getheaders()
                 body = r.read().decode()
+                #fix the headers (remove chunked encoding and add content-length)
                 if r.getheader('Transfer-Encoding') == "chunked":
                     headers.remove(('Transfer-Encoding', 'chunked'))
 
@@ -98,15 +94,20 @@ class HTTPRequest(socketserver.BaseRequestHandler):
                 else:
                     header_str += "\r\n\r\n"
 
+                #create a webpage string
                 web_page = ("HTTP/1.1 " + str(r.status) + " " + r.reason + "\r\n" + header_str + body).encode()
+                #send to client
                 self.request.sendall(web_page)
-                lru_cache.set(hashpath, web_page)
+                #cache in LRU cache
+                self.server.lru_cache.set(hashpath, web_page)
+        #if a scamper command is sent
         elif command == "SCAMPER".encode():
             res = self.__get_time(path.decode())
+            #send time back to dns server
             self.request.sendall(res.encode())
 
+    #ping the given ip and return the time
     def __get_time(self, ip):
-        #print("hello?")
         scamper_cmd = "scamper -c \'ping -c 1\' -i " + ip
         res = subprocess.getoutput(scamper_cmd)
         print(res)
@@ -121,10 +122,14 @@ class HTTPRequest(socketserver.BaseRequestHandler):
 class ThreadHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
+#start server class
 class HTTPServerFront(object):
     server = 0
-    def __init__(self, host, port):
+    def __init__(self, host, port, conn, lru_cache, cache):
         self.server = ThreadHTTPServer((host, port), HTTPRequest)
+        self.server.conn = conn
+        self.server.cache = cache
+        self.server.lru_cache = lru_cache
 
         server_thread = threading.Thread(target=self.server.serve_forever)
         server_thread.daemon = True
@@ -137,6 +142,20 @@ class HTTPServerFront(object):
         self.server.server_close()
 
 if __name__ == "__main__":
+    #initialize variables
+    lru_cache = LRU()
+
+    optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
+    for opt in optlist:
+        if opt[0] == '-p':
+            port = int(opt[1])
+        elif opt[0] == '-o':
+            origin = opt[1]
+
+    conn = http.client.HTTPConnection(origin + ":8080")
+
+    cache = {}
     t = threading.Thread(target=update_cache, args=(cache,))
     t.start()
-    baz = HTTPServerFront("", port)
+    #start the server
+    baz = HTTPServerFront("", port, conn, lru_cache, cache)

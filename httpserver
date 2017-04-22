@@ -11,6 +11,8 @@ import glob
 import http.client
 import collections
 import time
+import subprocess
+import random
 
 optlist, _ = getopt.getopt(sys.argv[1:], 'p:o:')
 for opt in optlist:
@@ -92,13 +94,29 @@ class HTTPRequest(socketserver.BaseRequestHandler):
 
                 header_str = '\r\n'.join("{}: {}".format(key, val) for key, val in headers)
                 if r.getheader('Content-Length') != None:
-                    header_str += ("Content-Length: " + len(body) + "\r\n\r\n")
+                    header_str += ("Content-Length: " + str(len(body)) + "\r\n\r\n")
                 else:
                     header_str += "\r\n\r\n"
 
                 web_page = ("HTTP/1.1 " + str(r.status) + " " + r.reason + "\r\n" + header_str + body).encode()
                 self.request.sendall(web_page)
                 lru_cache.set(hashpath, web_page)
+        elif command == "SCAMPER".encode():
+            res = self.__get_time(path.decode())
+            self.request.sendall(res.encode())
+
+    def __get_time(self, ip):
+        #print("hello?")
+        scamper_cmd = "scamper -c \'ping -c 1\' -i " + ip
+        res = subprocess.getoutput(scamper_cmd)
+        print(res)
+        lines = res.split('\n')
+        if (len(lines) < 5):
+            return "99999"
+        mline = lines[4]
+        avg = mline.split("/")[5]
+        print("Average from this: " + avg)
+        return avg
 
 class ThreadHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass

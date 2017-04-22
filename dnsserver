@@ -15,12 +15,6 @@ for load-balancing and performance
 @license AGPLv3
 '''
 
-optlist, _ = getopt.getopt(sys.argv[1:], 'p:n:')
-for opt in optlist:
-    if opt[0] == '-p':
-        port = int(opt[1])
-    elif opt[0] == '-n':
-        name = opt[1]
 
 class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     '''
@@ -31,8 +25,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_PKT_SIZE = 512
     DNS_FMT = ">HHHHHH"
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
-    global port
-    SCAMPER_PORT = port
+    SCAMPER_PORT = self.server.port
     SERVER_LIST ={
                 'ec2-52-90-80-45.compute-1.amazonaws.com' : '52.90.80.45',
                 'ec2-54-183-23-203.us-west-1.compute.amazonaws.com' : '54.183.23.203',
@@ -167,8 +160,9 @@ class DNSServerFront(object):
     # server object
     server = 0
 
-    def __init__(self,host, port):
+    def __init__(self, host, port):
         self.server = ThreadedDNSServer((host, port), ThreadedDNSRequestHandler)
+        self.server.port = port
         # Start a thread with the server -- that thread will then start one
         # more thread for each request
         server_thread = threading.Thread(target=self.server.serve_forever)
@@ -183,6 +177,13 @@ class DNSServerFront(object):
         self.server.server_close()
 
 if __name__ == "__main__":
+    optlist, _ = getopt.getopt(sys.argv[1:], 'p:n:')
+    for opt in optlist:
+        if opt[0] == '-p':
+            port = int(opt[1])
+        elif opt[0] == '-n':
+            name = opt[1]
+
     print("PORT:")
     print(port)
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -71,7 +71,7 @@ class HTTPRequest(socketserver.BaseRequestHandler):
             hashpath = hashlib.sha256(path).hexdigest()
             #if in the pre-cache
             if hashpath in self.server.cache:
-                response = self.sever.cache[hashpath]
+                response = self.server.cache[hashpath]
                 self.request.sendall(response)
             #if in the LRU cache
             elif self.server.lru_cache.has(hashpath):

@@ -25,7 +25,6 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
     DNS_PKT_SIZE = 512
     DNS_FMT = ">HHHHHH"
     DNS_UNPK = namedtuple('DNS', 'pkt_id flags qdcount ancount nscount arcount')
-    SCAMPER_PORT = self.server.port
     SERVER_LIST ={
                 'ec2-52-90-80-45.compute-1.amazonaws.com' : '52.90.80.45',
                 'ec2-54-183-23-203.us-west-1.compute.amazonaws.com' : '54.183.23.203',
@@ -79,7 +78,7 @@ class ThreadedDNSRequestHandler(socketserver.BaseRequestHandler):
             print("Host ip + " + hostip)
             try:
                 ## connect to scamper server in replica
-                sock.connect((hostip, self.SCAMPER_PORT))
+                sock.connect((hostip, self.server.port))
                 print("Conneted to server...")
                 ## send clientip to scamper server
                 print("Client ip: " + clientip)

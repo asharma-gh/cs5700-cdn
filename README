@@ -1,6 +1,7 @@
-Project5CDN
+# Project5CDN
+This was our final project for CS5700 Network Fundamentals where we created a distributed CDN to serve static html content.
 
-High Level Approach
+## Write-up
 
 In this assignment, we started by first defining our two servers for dns and http.
 We then further iterated on the features for these two servers. This involved developing
